@@ -1,0 +1,29 @@
+# Maven / Java Build Artifacts
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Environment & Secret Files (CRITICAL)
+.env
+.env.*
+!.env.example
+*.env
+
+# IDE / Editor Files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+
+# OS / Log files
+.DS_Store
+*.log
+Thumbs.db
+
+# Maven wrapper (optional — keeping mvnw in repo)
+!.mvn/wrapper/maven-wrapper.jar
