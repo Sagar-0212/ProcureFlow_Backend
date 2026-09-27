@@ -13,6 +13,11 @@ import com.procureflow.enums.RoleName;
 import com.procureflow.exception.BadRequestException;
 import com.procureflow.exception.ResourceNotFoundException;
 import com.procureflow.mapper.PurchaseRequestMapper;
+import com.procureflow.entity.Approval;
+import com.procureflow.entity.ApprovalRule;
+import com.procureflow.enums.ApprovalStatus;
+import com.procureflow.repository.ApprovalRepository;
+import com.procureflow.repository.ApprovalRuleRepository;
 import com.procureflow.repository.DepartmentRepository;
 import com.procureflow.repository.ProductRepository;
 import com.procureflow.repository.PurchaseRequestRepository;
@@ -38,6 +43,8 @@ public class PurchaseRequestService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final ProductRepository productRepository;
+    private final ApprovalRuleRepository approvalRuleRepository;
+    private final ApprovalRepository approvalRepository;
     private final PurchaseRequestMapper purchaseRequestMapper;
 
     @Transactional
@@ -185,9 +192,20 @@ public class PurchaseRequestService {
             throw new BadRequestException("Cannot submit an empty purchase request");
         }
 
+        // Determine applicable approval rule from totalAmount
+        ApprovalRule matchingRule = approvalRuleRepository.findMatchingRule(pr.getTotalAmount())
+                .orElseThrow(() -> new BadRequestException("No active approval rule found for purchase request amount: " + pr.getTotalAmount()));
+
         pr.setStatus(RequestStatus.PENDING_APPROVAL);
         PurchaseRequest submittedPr = purchaseRequestRepository.save(pr);
-        log.info("Submitted purchase request id={} number='{}' status='{}'", submittedPr.getId(), submittedPr.getRequestNumber(), submittedPr.getStatus());
+
+        Approval approval = Approval.builder()
+                .purchaseRequest(submittedPr)
+                .status(ApprovalStatus.PENDING)
+                .build();
+        approvalRepository.save(approval);
+
+        log.info("Submitted purchase request id={} number='{}' status='{}' matching rule id={}", submittedPr.getId(), submittedPr.getRequestNumber(), submittedPr.getStatus(), matchingRule.getId());
 
         return purchaseRequestMapper.toResponse(submittedPr);
     }

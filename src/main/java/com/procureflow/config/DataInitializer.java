@@ -15,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.procureflow.entity.ApprovalRule;
+import com.procureflow.repository.ApprovalRuleRepository;
+
+import java.math.BigDecimal;
 import java.util.Arrays;
 
 @Slf4j
@@ -25,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
+    private final ApprovalRuleRepository approvalRuleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${DEFAULT_ADMIN_EMAIL:admin@procureflow.com}")
@@ -37,6 +42,20 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         seedRoles();
         seedDefaultDepartmentAndAdmin();
+        seedDefaultApprovalRule();
+    }
+
+    private void seedDefaultApprovalRule() {
+        if (approvalRuleRepository.count() == 0) {
+            ApprovalRule defaultRule = ApprovalRule.builder()
+                    .minimumAmount(BigDecimal.ZERO)
+                    .maximumAmount(new BigDecimal("10000000.00"))
+                    .requiredRole(RoleName.MANAGER)
+                    .active(true)
+                    .build();
+            approvalRuleRepository.save(defaultRule);
+            log.info("Seeded default approval rule: 0 - 10,000,000 for MANAGER");
+        }
     }
 
     private void seedRoles() {
