@@ -72,7 +72,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedDefaultDepartmentAndAdmin() {
-        Department adminDept = departmentRepository.findByName("Executive")
+        Department execDept = departmentRepository.findByName("Executive")
                 .orElseGet(() -> departmentRepository.save(
                         Department.builder()
                                 .name("Executive")
@@ -81,28 +81,60 @@ public class DataInitializer implements CommandLineRunner {
                                 .build()
                 ));
 
-        if (!userRepository.existsByEmail(adminEmail)) {
-            if (!StringUtils.hasText(adminPassword)) {
-                log.warn("DEFAULT_ADMIN_PASSWORD is not configured in local environment. Skipping initial admin user creation.");
-                return;
-            }
+        Department itDept = departmentRepository.findByName("Information Technology")
+                .orElseGet(() -> departmentRepository.save(
+                        Department.builder()
+                                .name("Information Technology")
+                                .description("IT Department")
+                                .active(true)
+                                .build()
+                ));
 
-            Role adminRole = roleRepository.findByName(RoleName.ADMIN)
-                    .orElseThrow(() -> new IllegalStateException("ADMIN role not found"));
+        Department procDept = departmentRepository.findByName("Procurement")
+                .orElseGet(() -> departmentRepository.save(
+                        Department.builder()
+                                .name("Procurement")
+                                .description("Procurement & Sourcing Department")
+                                .active(true)
+                                .build()
+                ));
 
-            User adminUser = User.builder()
-                    .employeeCode("EMP-ADMIN-001")
-                    .firstName("System")
-                    .lastName("Administrator")
-                    .email(adminEmail)
-                    .passwordHash(passwordEncoder.encode(adminPassword))
-                    .role(adminRole)
-                    .department(adminDept)
+        Department finDept = departmentRepository.findByName("Finance")
+                .orElseGet(() -> departmentRepository.save(
+                        Department.builder()
+                                .name("Finance")
+                                .description("Finance & Accounting Department")
+                                .active(true)
+                                .build()
+                ));
+
+        String pwd = StringUtils.hasText(adminPassword) ? adminPassword : "Admin@123";
+
+        seedUser("EMP-ADMIN-001", "System", "Admin", adminEmail, pwd, RoleName.ADMIN, execDept);
+        seedUser("EMP-MGR-001", "Sarah", "Manager", "manager@procureflow.com", "Manager@123", RoleName.MANAGER, itDept);
+        seedUser("EMP-PROC-001", "Alex", "Procurement", "procurement@procureflow.com", "Procurement@123", RoleName.PROCUREMENT_OFFICER, procDept);
+        seedUser("EMP-FIN-001", "Frank", "Finance", "finance@procureflow.com", "Finance@123", RoleName.FINANCE_OFFICER, finDept);
+        seedUser("EMP-EMP-001", "Emma", "Employee", "employee@procureflow.com", "Employee@123", RoleName.EMPLOYEE, itDept);
+    }
+
+    private void seedUser(String empCode, String firstName, String lastName, String email, String password, RoleName roleName, Department dept) {
+        if (!userRepository.existsByEmail(email)) {
+            Role role = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new IllegalStateException(roleName + " role not found"));
+
+            User user = User.builder()
+                    .employeeCode(empCode)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
+                    .passwordHash(passwordEncoder.encode(password))
+                    .role(role)
+                    .department(dept)
                     .active(true)
                     .build();
 
-            userRepository.save(adminUser);
-            log.info("Seeded initial admin user: {}", adminEmail);
+            userRepository.save(user);
+            log.info("Seeded initial user: {} ({})", email, roleName);
         }
     }
 }
