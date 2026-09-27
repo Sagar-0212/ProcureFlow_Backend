@@ -30,6 +30,7 @@ public class ApprovalService {
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final UserRepository userRepository;
     private final ApprovalMapper approvalMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<ApprovalResponse> getPendingApprovals() {
@@ -76,6 +77,8 @@ public class ApprovalService {
         Approval saved = approvalRepository.save(approval);
         log.info("Approved purchase request id={} number='{}' by approver='{}'", pr.getId(), pr.getRequestNumber(), approverEmail);
 
+        auditLogService.logAction(approver, "APPROVE_PR", "PurchaseRequest", pr.getId(), "Approved purchase request " + pr.getRequestNumber());
+
         return approvalMapper.toResponse(saved);
     }
 
@@ -110,6 +113,8 @@ public class ApprovalService {
 
         Approval saved = approvalRepository.save(approval);
         log.info("Rejected purchase request id={} number='{}' by approver='{}' reason='{}'", pr.getId(), pr.getRequestNumber(), approverEmail, decisionRequest.getComments());
+
+        auditLogService.logAction(approver, "REJECT_PR", "PurchaseRequest", pr.getId(), "Rejected purchase request " + pr.getRequestNumber() + ". Reason: " + decisionRequest.getComments());
 
         return approvalMapper.toResponse(saved);
     }

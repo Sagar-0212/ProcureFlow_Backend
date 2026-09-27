@@ -29,6 +29,7 @@ public class QuotationService {
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
     private final QuotationMapper quotationMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public QuotationResponse create(QuotationRequest request) {
@@ -206,6 +207,8 @@ public class QuotationService {
         }
 
         log.info("Selected quotation id={} for PR id={}. Other quotations rejected.", quotationId, prId);
+
+        auditLogService.logAction("SELECT_QUOTATION", "Quotation", quotationId, "Selected quotation " + selectedQuotation.getQuotationNumber() + " for PR id=" + prId);
 
         return quotationMapper.toResponse(selectedQuotation);
     }

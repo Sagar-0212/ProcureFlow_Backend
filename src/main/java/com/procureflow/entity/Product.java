@@ -40,6 +40,10 @@ public class Product extends BaseAuditEntity {
     @Column(name = "unit", nullable = false, length = 30)
     private ProductUnit unit;
 
+    @Column(name = "minimum_stock_level", columnDefinition = "integer default 10")
+    @Builder.Default
+    private Integer minimumStockLevel = 10;
+
     @Builder.Default
     @Column(name = "active", nullable = false)
     private boolean active = true;

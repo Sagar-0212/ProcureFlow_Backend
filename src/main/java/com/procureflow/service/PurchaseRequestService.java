@@ -46,6 +46,7 @@ public class PurchaseRequestService {
     private final ApprovalRuleRepository approvalRuleRepository;
     private final ApprovalRepository approvalRepository;
     private final PurchaseRequestMapper purchaseRequestMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public PurchaseRequestResponse create(PurchaseRequestRequest request, String currentUserEmail) {
@@ -76,6 +77,8 @@ public class PurchaseRequestService {
 
         PurchaseRequest savedPr = purchaseRequestRepository.save(pr);
         log.info("Created purchase request id={} number='{}' by user='{}'", savedPr.getId(), savedPr.getRequestNumber(), currentUserEmail);
+
+        auditLogService.logAction(user, "CREATE_PR", "PurchaseRequest", savedPr.getId(), "Created purchase request " + savedPr.getRequestNumber());
 
         return purchaseRequestMapper.toResponse(savedPr);
     }
@@ -206,6 +209,8 @@ public class PurchaseRequestService {
         approvalRepository.save(approval);
 
         log.info("Submitted purchase request id={} number='{}' status='{}' matching rule id={}", submittedPr.getId(), submittedPr.getRequestNumber(), submittedPr.getStatus(), matchingRule.getId());
+
+        auditLogService.logAction(user, "SUBMIT_PR", "PurchaseRequest", submittedPr.getId(), "Submitted purchase request " + submittedPr.getRequestNumber());
 
         return purchaseRequestMapper.toResponse(submittedPr);
     }
