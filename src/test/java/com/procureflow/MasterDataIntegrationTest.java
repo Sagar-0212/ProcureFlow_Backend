@@ -25,7 +25,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -131,8 +132,10 @@ class MasterDataIntegrationTest {
     @Test
     @DisplayName("Department CRUD & RBAC: Admin creates department, Employee restricted")
     void testDepartmentLifecycle() throws Exception {
+        String deptName = "Logistics Dept " + randomSuffix();
+
         DepartmentRequest request = DepartmentRequest.builder()
-                .name("Logistics Dept")
+                .name(deptName)
                 .description("Supply chain operations")
                 .build();
 
@@ -150,7 +153,7 @@ class MasterDataIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty())
-                .andExpect(jsonPath("$.name").value("Logistics Dept"))
+                .andExpect(jsonPath("$.name").value(deptName))
                 .andExpect(jsonPath("$.active").value(true))
                 .andReturn().getResponse().getContentAsString();
 
@@ -167,7 +170,7 @@ class MasterDataIntegrationTest {
         mockMvc.perform(get("/api/departments/" + createdId)
                         .header("Authorization", "Bearer " + employeeToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Logistics Dept"));
+                .andExpect(jsonPath("$.name").value(deptName));
 
         // Toggle Active
         mockMvc.perform(patch("/api/departments/" + createdId + "/toggle-active")
@@ -181,8 +184,10 @@ class MasterDataIntegrationTest {
     @Test
     @DisplayName("Category CRUD: Procurement Officer can manage categories")
     void testCategoryLifecycle() throws Exception {
+        String catName = "Office Supplies " + randomSuffix();
+
         CategoryRequest request = CategoryRequest.builder()
-                .name("Office Supplies")
+                .name(catName)
                 .description("General stationery and office tools")
                 .build();
 
@@ -192,14 +197,15 @@ class MasterDataIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Office Supplies"))
+                .andExpect(jsonPath("$.name").value(catName))
                 .andReturn().getResponse().getContentAsString();
 
         Long categoryId = objectMapper.readTree(responseContent).get("id").asLong();
 
         // Update category name
+        String updatedCatName = "Stationery " + randomSuffix();
         CategoryRequest updateRequest = CategoryRequest.builder()
-                .name("Office Supplies & Stationery")
+                .name(updatedCatName)
                 .description("Updated description")
                 .build();
 
@@ -208,7 +214,7 @@ class MasterDataIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Office Supplies & Stationery"));
+                .andExpect(jsonPath("$.name").value(updatedCatName));
     }
 
     // --- Product Tests ---
@@ -216,14 +222,16 @@ class MasterDataIntegrationTest {
     @Test
     @DisplayName("Product CRUD: Product creation linked to Category and ProductUnit")
     void testProductLifecycle() throws Exception {
+        String catName = "Electronics " + randomSuffix();
         Category category = categoryRepository.save(Category.builder()
-                .name("Hardware & Electronics")
+                .name(catName)
                 .description("Tech gear")
                 .active(true)
                 .build());
 
+        String sku = "SKU-LAP-" + randomSuffix();
         ProductRequest request = ProductRequest.builder()
-                .sku("SKU-LAPTOP-001")
+                .sku(sku)
                 .name("Enterprise Laptop 15-inch")
                 .description("High-spec developer laptop")
                 .categoryId(category.getId())
@@ -235,8 +243,8 @@ class MasterDataIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.sku").value("SKU-LAPTOP-001"))
-                .andExpect(jsonPath("$.categoryName").value("Hardware & Electronics"))
+                .andExpect(jsonPath("$.sku").value(sku))
+                .andExpect(jsonPath("$.categoryName").value(catName))
                 .andExpect(jsonPath("$.unit").value("PIECE"))
                 .andReturn().getResponse().getContentAsString();
 
@@ -250,7 +258,7 @@ class MasterDataIntegrationTest {
 
         // Non-existent category ID -> 404 Not Found
         ProductRequest invalidCategoryRequest = ProductRequest.builder()
-                .sku("SKU-LAPTOP-999")
+                .sku("SKU-INVALID-" + randomSuffix())
                 .name("Invalid Product")
                 .categoryId(99999L)
                 .unit(ProductUnit.BOX)
@@ -268,8 +276,10 @@ class MasterDataIntegrationTest {
     @Test
     @DisplayName("Supplier CRUD: Supplier creation and unique code validation")
     void testSupplierLifecycle() throws Exception {
+        String supplierCode = "SUP-" + randomSuffix();
+
         SupplierRequest request = SupplierRequest.builder()
-                .supplierCode("SUP-ACME-001")
+                .supplierCode(supplierCode)
                 .companyName("Acme Tech Solutions")
                 .contactPerson("John Doe")
                 .email("contact@acme.com")
@@ -284,7 +294,7 @@ class MasterDataIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.supplierCode").value("SUP-ACME-001"))
+                .andExpect(jsonPath("$.supplierCode").value(supplierCode))
                 .andExpect(jsonPath("$.companyName").value("Acme Tech Solutions"))
                 .andReturn().getResponse().getContentAsString();
 
@@ -302,5 +312,9 @@ class MasterDataIntegrationTest {
                         .header("Authorization", "Bearer " + employeeToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    private String randomSuffix() {
+        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }
